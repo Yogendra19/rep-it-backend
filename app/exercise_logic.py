@@ -345,9 +345,29 @@ def check_balance(landmarks, frame_height):
         return True  # Balanced
     return False  # Not balanced
 
+def calculate_angle_3p(point1, point2, point3):
+    """
+    Calculate the angle between three points.
+    """
+    # Convert points to numpy arrays
+    p1 = np.array([point1.x, point1.y])
+    p2 = np.array([point2.x, point2.y])
+    p3 = np.array([point3.x, point3.y])
+
+    # Calculate vectors
+    vector1 = p1 - p2
+    vector2 = p3 - p2
+
+    # Calculate angle
+    cosine_angle = np.dot(vector1, vector2) / (np.linalg.norm(vector1) * np.linalg.norm(vector2))
+    angle = np.degrees(np.arccos(np.clip(cosine_angle, -1.0, 1.0)))
+    return angle
 
 def check_plank(landmarks):
+
+
     mp_pose = mp.solutions.pose
+
     # Get keypoints for plank (shoulders, hips, ankles)
     left_shoulder = landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER.value]
     right_shoulder = landmarks[mp_pose.PoseLandmark.RIGHT_SHOULDER.value]
@@ -356,16 +376,16 @@ def check_plank(landmarks):
     left_ankle = landmarks[mp_pose.PoseLandmark.LEFT_ANKLE.value]
     right_ankle = landmarks[mp_pose.PoseLandmark.RIGHT_ANKLE.value]
 
-    # Ensure the body is in a straight line (shoulders, hips, ankles aligned)
-    plank_threshold = 0.1  # Tolerance level for plank alignment
+    # Calculate angles
+    left_body_angle = calculate_angle_3p(left_shoulder, left_hip, left_ankle)  # Left side of the body
+    right_body_angle = calculate_angle_3p(right_shoulder, right_hip, right_ankle)  # Right side of the body
 
-    # Calculate distances between body parts
-    shoulder_line = np.linalg.norm(np.array([left_shoulder.x, left_shoulder.y]) - np.array([right_shoulder.x, right_shoulder.y]))
-    hip_line = np.linalg.norm(np.array([left_hip.x, left_hip.y]) - np.array([right_hip.x, right_hip.y]))
-    ankle_line = np.linalg.norm(np.array([left_ankle.x, left_ankle.y]) - np.array([right_ankle.x, right_ankle.y]))
+    # Tolerance thresholds for angles
+    angle_tolerance = (170, 180)  # Ideal plank: angle between 170 and 180 degrees
 
-    # Check if the body is straight
-    if abs(shoulder_line - hip_line) < plank_threshold and abs(hip_line - ankle_line) < plank_threshold:
+    # Check if both sides are within the angle tolerance
+    if (angle_tolerance[0] <= left_body_angle <= angle_tolerance[1] and
+            angle_tolerance[0] <= right_body_angle <= angle_tolerance[1]):
         return True
     return False
 
